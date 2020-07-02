@@ -175,6 +175,11 @@ class GpioEvent(Event):
     pass
 
 
+class HidEvent(Event):
+
+    pass
+
+
 class CameraEvent(Event):
 
     def __init__(self, name, picture=None):

@@ -33,6 +33,7 @@ import multiprocessing as mp
 from . import camera, gui
 from .Config import Config
 from .gpio import Gpio
+from .hid import Hid
 from .util import lookup_and_import
 from .StateMachine import Context, ErrorEvent
 from .Threading import Communicator, Workers
@@ -145,6 +146,32 @@ class GpioProcess(mp.Process):
         logging.debug('GpioProcess: Exit')
 
 
+class HidProcess(mp.Process):
+
+    def __init__(self, argv, config, comm):
+
+        super().__init__()
+        self.daemon = True
+
+        self._cfg = config
+        self._comm = comm
+
+    def run(self):
+
+        logging.debug('HidProcess: Initializing...')
+
+        while True:
+            try:
+                logging.debug('HidProcess: Running...')
+                if Hid(self._cfg, self._comm).run():
+                    break
+            except Exception as e:
+                logging.exception('HidProcess: Exception "{}"'.format(e))
+                self._comm.send(Workers.MASTER, ErrorEvent('Hid', str(e)))
+
+        logging.debug('HidProcess: Exit')
+
+
 def parseArgs(argv):
 
     # Add parameter for direct startup
@@ -185,7 +212,7 @@ def run(argv, is_run):
     # 3. GUI
     # 4. Postprocessing worker
     # 5. GPIO handler
-    proc_classes = (CameraProcess, WorkerProcess, GuiProcess, GpioProcess)
+    proc_classes = (CameraProcess, WorkerProcess, GuiProcess, GpioProcess, HidProcess)
     procs = [P(argv, config, comm) for P in proc_classes]
 
     for proc in procs:
